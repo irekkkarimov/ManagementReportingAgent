@@ -1,0 +1,10 @@
+pandas
+numpy
+matplotlib
+reportlab
+
+langchain
+langchain-openai
+openai
+langchain_deepseek
+deepseek
