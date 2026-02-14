@@ -8,3 +8,6 @@ langchain-openai
 openai
 langchain_deepseek
 deepseek
+
+yandex-ai-studio-sdk
+bs4

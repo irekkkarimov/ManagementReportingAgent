@@ -76,7 +76,3 @@ class DataGenerator:
         df = df.drop(columns=["month"])
 
         return df
-
-
-data_generator = DataGenerator()
-data_generator.generate(["Реклама"])

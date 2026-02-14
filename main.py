@@ -4,11 +4,36 @@ from agent.data_preprocessor import DataPreprocessor
 from agent.file_outputs.data_postprocessor import DataPostprocessor
 from agent.file_outputs.excel_generator import ExcelReportGenerator
 from agent.file_outputs.pdf_generator import PDFReportGenerator
+from agent.search.yandex_gpt import YandexGPT
 from agent.visualization import VisualizationEngine
-from data.generate_data import DataGenerator
+from agent.search.search_processor import SearchProcessor
+from agent.search.yandex_search import YandexSearch
+
+
 
 
 def main():
+    yc_search = YandexSearch(folder_id=FOLDER_ID, api_key=API_KEY2)
+    yc_gpt = YandexGPT(folder_id=FOLDER_ID, api_key=API_KEY2, prompt_path="./agent/input/prompt.txt")
+    search_processor = SearchProcessor()
+
+    domain = "Логистика"
+    search_query = "Средняя выручка предприятий в сфере логистики в РФ в 2025"
+
+    search_result = yc_search.search(search_query)
+
+    clean_html = search_processor.clean_html(search_result)
+    extracted_html = search_processor.extract_result(search_query, clean_html)
+
+    search_processor.save_html_to_file(str(clean_html), "./output/search.html")
+    search_processor.save_formatted_json(extracted_html, "./output/result.json")
+
+    gpt_result = yc_gpt.process_search(domain, extracted_html)
+    yc_gpt.save_result_to_json(gpt_result, "./output/gpt_result.json")
+    print(YandexGPT.extract_gpt_answer(gpt_result))
+
+    return
+
     loader = DataLoader()
     preprocessor = DataPreprocessor()
     postprocessor = DataPostprocessor()
