@@ -1,3 +1,5 @@
+import os
+
 from agent.analytics import AnalyticsEngine
 from agent.data_loader import DataLoader
 from agent.data_preprocessor import DataPreprocessor
@@ -8,13 +10,17 @@ from agent.search.yandex_gpt import YandexGPT
 from agent.visualization import VisualizationEngine
 from agent.search.search_processor import SearchProcessor
 from agent.search.yandex_search import YandexSearch
+from dotenv import load_dotenv
 
+load_dotenv()
 
+FOLDER_ID = os.getenv("FOLDER_ID")
+API_KEY = os.getenv("API_KEY_ALL")
 
 
 def main():
-    yc_search = YandexSearch(folder_id=FOLDER_ID, api_key=API_KEY2)
-    yc_gpt = YandexGPT(folder_id=FOLDER_ID, api_key=API_KEY2, prompt_path="./agent/input/prompt.txt")
+    yc_search = YandexSearch(folder_id=FOLDER_ID, api_key=API_KEY)
+    yc_gpt = YandexGPT(folder_id=FOLDER_ID, api_key=API_KEY, prompt_path="./agent/input/prompt.txt")
     search_processor = SearchProcessor()
 
     domain = "Логистика"

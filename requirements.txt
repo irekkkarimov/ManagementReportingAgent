@@ -11,3 +11,5 @@ deepseek
 
 yandex-ai-studio-sdk
 bs4
+
+python-dotenv
