@@ -1,8 +1,8 @@
-from agent.data_loader import DataLoader
-from agent.data_preprocessor import DataPreprocessor
-from agent.analytics import AnalyticsEngine
-from agent.visualization import VisualizationEngine
-from agent.text_generator import TextExplanationGenerator
+from agent.common.data_loader import DataLoader
+from agent.other.data_preprocessor import DataPreprocessor
+from agent.other.analytics import AnalyticsEngine
+from agent.other.visualization import VisualizationEngine
+from agent.other.text_generator import TextExplanationGenerator
 
 
 class ReportAIAgent:
