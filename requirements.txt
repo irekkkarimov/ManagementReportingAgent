@@ -1,3 +1,7 @@
+tabula-py
+requests
+paddleocr
+opencv-python
 openpyxl
 langchain-classic
 langchain-community
@@ -19,3 +23,6 @@ bs4
 python-dotenv
 
 python-telegram-bot==21.10
+
+pytest
+pytest-asyncio

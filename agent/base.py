@@ -16,7 +16,17 @@ from agent.tools.finance.profitability.operating_margin import calculate_operati
 from agent.tools.finance.profitability.roa import calculate_roa
 from agent.tools.finance.profitability.roe import calculate_roe
 from agent.tools.finance.profitability.ros import calculate_ros
-from agent.tools.image.recognize_image import recognize_image_tool
+from agent.tools.finance.profitability.turnover.total_asset import calculate_total_asset_turnover
+from agent.tools.finance.profitability.turnover.inventory import calculate_inventory_turnover
+from agent.tools.finance.profitability.turnover.receivables import calculate_receivables_turnover
+from agent.tools.finance.profitability.turnover.payables import calculate_payables_turnover
+from agent.tools.finance.stability import calculate_financial_stability_ratio
+from agent.tools.finance.liquidity import (
+    calculate_current_liquidity_ratio,
+    calculate_quick_liquidity_ratio,
+    calculate_cash_liquidity_ratio,
+)
+from agent.tools.image.recognize_image import parse_financial_report_tool
 from agent.tools.output.generate_xlsx import generate_xlsx_tool
 from agent.yandex.yandex_gpt import YandexGPT
 from agent.yandex.yandex_service import YandexOcrService
@@ -31,19 +41,53 @@ class Agent:
                  yandex_gpt_api_key: str,
                  yandex_gpt_prompt_path: str,
                  yandex_gpt_temperature: float):
-        model = GigaChat(
+        self._model = GigaChat(
             model="GigaChat-2-Pro",
             verify_ssl_certs=False,
             credentials=gigachat_creds,
-            timeout=220,
-            temperature=gigachat_temperature
+            timeout=120,
+            temperature=gigachat_temperature,
+
         )
 
         self._yandex_gpt = YandexGPT(yc_folder_id, yandex_gpt_api_key, yandex_gpt_prompt_path, yandex_gpt_temperature)
 
-        self._model = model
-        self._agent = create_agent(model, tools=Agent.get_tools(), system_prompt=Agent.read_prompt(gigachat_prompt_path))
+        self._agent = create_agent(self._model, tools=Agent.get_tools(), system_prompt=Agent.read_prompt(gigachat_prompt_path))
         self._history: Dict[int, List[BaseMessage]] = defaultdict(list)
+
+
+    def process_query(self, user_id: int, query: str, file_paths: list[str] = None):
+        message_history: list[BaseMessage] = list()
+
+        try_get_history = self._history.get(user_id)
+        if try_get_history is not None:
+            message_history = list(try_get_history)
+
+        if file_paths is not None and len(file_paths) > 0:
+            paths_str = ", ".join(file_paths)
+            user_query = query.strip() if query else ""
+            if not user_query:
+                user_query = "Распознай данные из отчёта и проведи анализ"
+
+            user_message = (
+                f"Пользователь загрузил изображения финансовых отчётов.\n"
+                f"Пути к файлам: {paths_str}\n\n"
+                f"Используй инструмент parse_financial_report_tool с этими путями "
+                f"чтобы распознать данные из изображений.\n\n"
+                f"Запрос пользователя: {user_query}"
+            )
+        else:
+            user_message = query
+
+        message_history.append({"role": "user", "content": user_message})
+
+        result = self._agent.invoke({"messages": message_history})
+
+        result_content = Agent._get_ai_result_content(result)
+        Agent._save_results(query=query, result=result)
+        self._history[user_id] = result["messages"]
+
+        return result_content
 
     # noinspection PyTypeChecker
     def process_text(self, user_id: int, queries: list[str]) -> str:
@@ -58,8 +102,6 @@ class Agent:
             "role": "user",
             "content": query
         })
-
-        print(message_history)
 
         result = self._agent.invoke(
             {
@@ -80,65 +122,33 @@ class Agent:
         print(final_ai_message.content)
         return final_ai_message.content
 
-    # noinspection PyTypeChecker
-    def process_images(self, user_id: int, query: str, file_paths: list[str] = None):
-        message_history = list()
-
-        try_get_history = self._history.get(user_id)
-        if try_get_history is not None:
-            message_history = list(try_get_history)
-
-        images_processed = Agent._process_images(file_paths)
-        images_processed_str: list[str] = []
-        for img in images_processed:
-            images_processed_str.append(img.__str__())
-
-        messages: list[dict] = [
-            {
-                "role": "user",
-                "content": "Обработай только числа, заключение не пиши. Числа, указанные в скобках, интерпретируй как отрицательные числа! Выпиши все указанные в файле данные в формате: Название - значение (x год), значение за (y год) и т.д."
-            },
-            {
-                "role": "user",
-                "content": ' | '.join(images_processed_str)
-            }
-        ]
-
-        messages = message_history + messages
-
-        result = self._agent.invoke(
-            {
-                "messages": messages
-            },
-        )
-
-        messages = result["messages"]
-
-        final_ai_message = next(
-            msg for msg in reversed(messages)
-            if isinstance(msg, AIMessage)
-        )
-
-        print("process_images: ", query,  final_ai_message.content)
-
-        return self.process_text(user_id, [query, final_ai_message.content])
-
-
-
     @staticmethod
     def get_tools() -> list[BaseTool]:
-        # init tools
-
         tools = [
             generate_xlsx_tool,
-            recognize_image_tool,
+            parse_financial_report_tool,
 
-            # finance tools
+            # profitability
             calculate_ros,
             calculate_roa,
             calculate_roe,
             calculate_gross_margin,
-            calculate_operating_margin]
+            calculate_operating_margin,
+
+            # turnover
+            calculate_total_asset_turnover,
+            calculate_inventory_turnover,
+            calculate_receivables_turnover,
+            calculate_payables_turnover,
+
+            # financial stability
+            calculate_financial_stability_ratio,
+
+            # liquidity
+            calculate_current_liquidity_ratio,
+            calculate_quick_liquidity_ratio,
+            calculate_cash_liquidity_ratio,
+        ]
 
         return tools
 
@@ -172,7 +182,7 @@ class Agent:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
-        print(f"Результат сохранён в {file_path}")
+        print(f"AGENT RESULT SAVED TO {file_path}")
 
     def _upload_files(self, file_paths: list[str]) -> list[str]:
         file_uploaded_ids: list[str] = []
@@ -181,24 +191,179 @@ class Agent:
             file = open(file_path, "rb")
             file_uploaded_ids.append(self._model.upload_file(file).id_)
 
+        print("UPLOADED FILES TO GIGACHAT: ", ', '.join(file_uploaded_ids))
         return file_uploaded_ids
 
     @staticmethod
-    def _process_images(file_paths: list[str]) -> list[dict]:
-        result: list[dict] = list()
+    def _get_ai_result_content(result: dict[str, Any] | Any) -> str:
+        return next(
+            msg for msg in reversed(result["messages"])
+            if isinstance(msg, AIMessage)
+        ).content
 
-        yandex_service = YandexOcrService()
-        yandex_service.load_env()
+    def extract_image_data(self, file_ids: list[str]) -> str:
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    "Ты OCR + data extraction модель. "
+                    "Извлеки ВСЕ возможные данные с изображения. "
+                    "Верни результат строго в формате JSON. "
+                    "Не выполняй анализ. Только извлечение данных."
+                )
+            },
+            {
+                "role": "user",
+                "content": "Извлеки все данные с изображения",
+                "attachments": file_ids
+            }
+        ]
 
-        for file_path in file_paths:
-            prompt_file = Path(file_path)
-            if not prompt_file.exists():
-                raise ValueError(f"File '{file_path}' not found")
+        response = self._agent.invoke({"messages": messages})
 
-            with open(prompt_file, "rb") as f:
-                file_content = f.read()
-                base64_content = base64.b64encode(file_content).decode("utf-8")
+        content = self._get_ai_result_content(response)
+        print("DATA EXTRACTED FROM IMAGE: \n", "IMAGE IDS: ", ', '.join(file_ids), "\n", content)
 
-                result.append(yandex_service.call_ocr(base64_content))
+        return content
+
+    def process_with_extracted_data(
+            self,
+            extracted_data: str,
+            user_query: str,
+            message_history: list[Any]
+    ):
+        message_history.append({
+            "role": "user",
+            "content": "Используй данные из JSON для выполнения запроса."
+        })
+
+        message_history.append({
+            "role": "user",
+            "content": f"""
+            Вот данные, извлечённые с изображения:
+
+            {extracted_data}
+
+            Запрос пользователя:
+            {user_query}
+            """
+        })
+
+        result = self._agent.invoke({
+            "messages": message_history
+        })
+
+        print("PROCESS WITH EXTRACTED DATA: \n", Agent._get_ai_result_content(result))
 
         return result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # # noinspection PyTypeChecker
+    # def process_images(self, user_id: int, query: str, file_paths: list[str] = None):
+    #     # message_history = list()
+    #     #
+    #     # try_get_history = self._history.get(user_id)
+    #     # if try_get_history is not None:
+    #     #     message_history = list(try_get_history)
+    #
+    #     images_processed = Agent._process_images(file_paths)
+    #     images_processed_from_llm: list[str] = []
+    #     for img in images_processed:
+    #         messages: list[dict] = [
+    #             {
+    #                 "role": "user",
+    #                 "content": "Обработай только числа, заключение не пиши. Числа, указанные в скобках, интерпретируй как отрицательные числа! Выпиши все указанные в файле данные в формате: Название - значение (x год), значение за (y год) и т.д. Заключение не пиши, пиши сухие данные"
+    #             },
+    #             {
+    #                 "role": "user",
+    #                 "content": img.__str__()
+    #             }
+    #         ]
+    #
+    #         result = self._agent.invoke(
+    #             {
+    #                 "messages": messages
+    #             },
+    #         )
+    #
+    #         messages = result["messages"]
+    #
+    #         images_processed_from_llm.append(next(
+    #             msg for msg in reversed(messages)
+    #             if isinstance(msg, AIMessage)
+    #         ).content)
+    #
+    #     print("process_images: ", query,  ' | '.join(images_processed_from_llm))
+    #
+    #     return self.process_text(user_id, [query, ' | '.join(images_processed_from_llm)])
+    #
+    # @staticmethod
+    # def _process_images(file_paths: list[str]) -> list[dict]:
+    #     result: list[dict] = list()
+    #
+    #     yandex_service = YandexOcrService()
+    #     yandex_service.load_env()
+    #
+    #     for file_path in file_paths:
+    #         prompt_file = Path(file_path)
+    #         if not prompt_file.exists():
+    #             raise ValueError(f"File '{file_path}' not found")
+    #
+    #         with open(prompt_file, "rb") as f:
+    #             file_content = f.read()
+    #             base64_content = base64.b64encode(file_content).decode("utf-8")
+    #
+    #             ocr_result = yandex_service.call_ocr(base64_content)
+    #
+    #             print("result of processing image: ", file_path, ". ", ocr_result)
+    #             result.append(ocr_result)
+    #
+    #
+    #     return result

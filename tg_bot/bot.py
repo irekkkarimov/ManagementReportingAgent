@@ -51,7 +51,7 @@ class TelegramAgentBot:
     ) -> None:
         chat_id = update.effective_chat.id
         user_text = update.message.text.strip()
-        reply_text = TelegramAgentBot.format_reply(self._agent.process_text(chat_id, [user_text]))
+        reply_text = TelegramAgentBot.format_reply(self._agent.process_query(chat_id, user_text))
 
         await TelegramAgentBot._reply(update, reply_text)
 
@@ -61,7 +61,7 @@ class TelegramAgentBot:
         caption_text = message.caption or ""
         media_group_id = message.media_group_id
 
-        print("received message: ", update)
+        print("MESSAGE RECEVED FROM TG: ", update)
 
         os.makedirs("./temp_photos", exist_ok=True)
 
@@ -84,7 +84,7 @@ class TelegramAgentBot:
         if not media_group_id:
             # Обычное одиночное фото
             reply_text = TelegramAgentBot.format_reply(
-                self._agent.process_images(chat_id, caption_text, [file_path])
+                self._agent.process_query(chat_id, caption_text, [file_path])
             )
 
             await TelegramAgentBot._reply(update, reply_text)
@@ -100,7 +100,7 @@ class TelegramAgentBot:
         image_paths = image_batch.image_paths
 
         reply_text = TelegramAgentBot.format_reply(
-            self._agent.process_images(image_batch.chat_id, image_batch.message, image_paths)
+            self._agent.process_query(image_batch.chat_id, image_batch.message, image_paths)
         )
 
         await TelegramAgentBot._reply(image_batch.update, reply_text)
@@ -126,7 +126,7 @@ class TelegramAgentBot:
                 .replace("$", ""))
 
     @staticmethod
-    async def _reply(update, reply_text:str):
+    async def _reply(update, reply_text: str):
         await update.message.reply_text(reply_text)
 
 
