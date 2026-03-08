@@ -38,6 +38,7 @@ class TelegramAgentBot:
         self.application.add_handler(CommandHandler("start", self.start))
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_photo_with_caption))
+        self.application.add_handler(MessageHandler(filters.Document.ALL, self.handle_document))
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         welcome_text = (
@@ -51,6 +52,9 @@ class TelegramAgentBot:
     ) -> None:
         chat_id = update.effective_chat.id
         user_text = update.message.text.strip()
+
+        print("MESSAGE RECEIVED FROM TG: ", update)
+
         reply_text = TelegramAgentBot.format_reply(self._agent.process_query(chat_id, user_text))
 
         await TelegramAgentBot._reply(update, reply_text)
@@ -61,7 +65,7 @@ class TelegramAgentBot:
         caption_text = message.caption or ""
         media_group_id = message.media_group_id
 
-        print("MESSAGE RECEVED FROM TG: ", update)
+        print("MESSAGE RECEIVED FROM TG: ", update)
 
         os.makedirs("./temp_photos", exist_ok=True)
 
@@ -89,6 +93,31 @@ class TelegramAgentBot:
 
             await TelegramAgentBot._reply(update, reply_text)
 
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Обработка загруженных файлов (Excel)."""
+        chat_id = update.effective_chat.id
+        message = update.message
+        document = message.document
+        if not document or not document.file_name:
+            await message.reply_text("Не удалось получить файл.")
+            return
+        name = document.file_name.lower()
+        if not (name.endswith(".xlsx") or name.endswith(".xls")):
+            await message.reply_text(
+                "Принимаются только файлы Excel (.xlsx или .xls). Загрузите таблицу в нужном формате."
+            )
+            return
+        caption_text = (message.caption or "").strip() or "Обработай приложенный Excel-файл."
+        os.makedirs("./temp_excel", exist_ok=True)
+        file = await document.get_file()
+        ext = ".xlsx" if name.endswith(".xlsx") else ".xls"
+        file_path = f"./temp_excel/{document.file_id}{ext}"
+        await file.download_to_drive(file_path)
+        reply_text = TelegramAgentBot.format_reply(
+            self._agent.process_query(chat_id, caption_text, [file_path])
+        )
+        await TelegramAgentBot._reply(update, reply_text)
+
     async def _init_image_batch_processing(self, media_group_id: str):
         image_batch = self._media_groups[media_group_id]
 
@@ -112,6 +141,7 @@ class TelegramAgentBot:
         #     level=logging.INFO,
         # )
         logger.info("Starting Telegram bot...")
+        print("TELEGRAM BOT STARTED")
 
         self.application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=10)
 

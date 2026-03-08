@@ -1,4 +1,3 @@
-import base64
 import json
 from collections import defaultdict
 from datetime import datetime
@@ -9,27 +8,25 @@ from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.tools import BaseTool
 from langchain_gigachat import GigaChat
-from openai import max_retries
 
+from agent.tools.finance.liquidity.cash_liquidity import calculate_cash_liquidity_ratio
+from agent.tools.finance.liquidity.current_liquidity import calculate_current_liquidity_ratio
+from agent.tools.finance.liquidity.quick_liquidity import calculate_quick_liquidity_ratio
 from agent.tools.finance.profitability.gross_margin import calculate_gross_margin
 from agent.tools.finance.profitability.operating_margin import calculate_operating_margin
 from agent.tools.finance.profitability.roa import calculate_roa
 from agent.tools.finance.profitability.roe import calculate_roe
 from agent.tools.finance.profitability.ros import calculate_ros
-from agent.tools.finance.profitability.turnover.total_asset import calculate_total_asset_turnover
-from agent.tools.finance.profitability.turnover.inventory import calculate_inventory_turnover
-from agent.tools.finance.profitability.turnover.receivables import calculate_receivables_turnover
-from agent.tools.finance.profitability.turnover.payables import calculate_payables_turnover
-from agent.tools.finance.stability import calculate_financial_stability_ratio
-from agent.tools.finance.liquidity import (
-    calculate_current_liquidity_ratio,
-    calculate_quick_liquidity_ratio,
-    calculate_cash_liquidity_ratio,
-)
-from agent.tools.image.recognize_image import parse_financial_report_tool
+from agent.tools.finance.stability.financial_stability import calculate_financial_stability_ratio
+from agent.tools.finance.turnover.total_asset import calculate_total_asset_turnover
+from agent.tools.finance.turnover.inventory import calculate_inventory_turnover
+from agent.tools.finance.turnover.receivables import calculate_receivables_turnover
+from agent.tools.finance.turnover.payables import calculate_payables_turnover
+from agent.tools.input.download_google_sheets import download_google_sheets
+from agent.tools.input.load_excel_file import load_excel_file_tool
+from agent.tools.input.validate_finance_link import validate_finance_link_tool
 from agent.tools.output.generate_xlsx import generate_xlsx_tool
 from agent.yandex.yandex_gpt import YandexGPT
-from agent.yandex.yandex_service import YandexOcrService
 
 
 class Agent:
@@ -55,7 +52,6 @@ class Agent:
         self._agent = create_agent(self._model, tools=Agent.get_tools(), system_prompt=Agent.read_prompt(gigachat_prompt_path))
         self._history: Dict[int, List[BaseMessage]] = defaultdict(list)
 
-
     def process_query(self, user_id: int, query: str, file_paths: list[str] = None):
         message_history: list[BaseMessage] = list()
 
@@ -63,23 +59,12 @@ class Agent:
         if try_get_history is not None:
             message_history = list(try_get_history)
 
-        if file_paths is not None and len(file_paths) > 0:
-            paths_str = ", ".join(file_paths)
-            user_query = query.strip() if query else ""
-            if not user_query:
-                user_query = "Распознай данные из отчёта и проведи анализ"
+        content = query
+        if file_paths:
+            content = f"{query}\n\nПриложенные файлы: {', '.join(file_paths)}"
+        message_history.append({"role": "user", "content": content})
 
-            user_message = (
-                f"Пользователь загрузил изображения финансовых отчётов.\n"
-                f"Пути к файлам: {paths_str}\n\n"
-                f"Используй инструмент parse_financial_report_tool с этими путями "
-                f"чтобы распознать данные из изображений.\n\n"
-                f"Запрос пользователя: {user_query}"
-            )
-        else:
-            user_message = query
-
-        message_history.append({"role": "user", "content": user_message})
+        print("MESSAGE HISTORY BEFORE AGENT CALL:", message_history)
 
         result = self._agent.invoke({"messages": message_history})
 
@@ -107,6 +92,7 @@ class Agent:
             {
                 "messages": message_history
             },
+            config={"recursion_limit": 10}
         )
 
         messages = result["messages"]
@@ -125,8 +111,10 @@ class Agent:
     @staticmethod
     def get_tools() -> list[BaseTool]:
         tools = [
-            generate_xlsx_tool,
-            parse_financial_report_tool,
+            #input
+            validate_finance_link_tool,
+            download_google_sheets,
+            load_excel_file_tool,
 
             # profitability
             calculate_ros,
@@ -148,6 +136,9 @@ class Agent:
             calculate_current_liquidity_ratio,
             calculate_quick_liquidity_ratio,
             calculate_cash_liquidity_ratio,
+
+            # output
+            generate_xlsx_tool,
         ]
 
         return tools

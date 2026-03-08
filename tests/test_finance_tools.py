@@ -1,15 +1,13 @@
-import pytest
-
 from agent.tools.utils import safe_div
 from agent.tools.finance.profitability.ros import calculate_ros
 from agent.tools.finance.profitability.roa import calculate_roa
 from agent.tools.finance.profitability.roe import calculate_roe
 from agent.tools.finance.profitability.gross_margin import calculate_gross_margin
 from agent.tools.finance.profitability.operating_margin import calculate_operating_margin
-from agent.tools.finance.profitability.turnover.total_asset import calculate_total_asset_turnover
-from agent.tools.finance.profitability.turnover.inventory import calculate_inventory_turnover
-from agent.tools.finance.profitability.turnover.receivables import calculate_receivables_turnover
-from agent.tools.finance.profitability.turnover.payables import calculate_payables_turnover
+from agent.tools.finance.turnover.total_asset import calculate_total_asset_turnover
+from agent.tools.finance.turnover.inventory import calculate_inventory_turnover
+from agent.tools.finance.turnover.receivables import calculate_receivables_turnover
+from agent.tools.finance.turnover.payables import calculate_payables_turnover
 from agent.tools.finance.stability import calculate_financial_stability_ratio
 from agent.tools.finance.liquidity import (
     calculate_current_liquidity_ratio,

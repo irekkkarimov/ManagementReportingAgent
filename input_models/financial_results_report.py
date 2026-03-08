@@ -1,47 +1,43 @@
-from pandas.core.interchange.dataframe_protocol import DataFrame
+"""
+Модель отчёта о финансовых результатах (форма 0710002), загруженного из Excel.
+Каждое поле — строка ОФР по коду; значение — dict {год: значение}.
+"""
 
-from input_models.utils import get_value_by_code
-import consts.finance as consts
+from dataclasses import dataclass, field
+from typing import Dict
+
+from consts.finance import OFR_CODE_TO_FIELD
 
 
+@dataclass
 class FinancialResultsReport:
-    # ===== Отчет о прибылях и убытках =====
-    year: int
-    revenue: float  # Выручка
-    other_incoming: float
-    cost_of_sales: float  # Себестоимость продаж (COGS)
-    gross_profit: float  # Операционная прибыль
-    commercial_expenses: float
-    management_expenses: float
-    profit_from_sales: float
-    income_from_participation: float
-    percentage_receivable: float
-    percentage_to_pay: float
-    other_profit: float
-    other_expenses: float
-    profit_from_continuing_operations: float
-    organization_income_tax: float
-    deferred_organization_income_tax: float
-    other: float
-    net_profit: float  # Чистая прибыль
+    """
+    Отчёт о финансовых результатах: отдельное поле на каждую строку по коду.
+    В каждом поле — словарь {дата/год: значение} (год как строка "2023", значение в тыс. руб.).
+    """
 
-    def __init__(self, df: DataFrame, year: int):
-        self.year = year
+    revenue: Dict[str, int] = field(default_factory=dict)  # 2110 Выручка
+    other_incoming: Dict[str, int] = field(default_factory=dict)  # 2115
+    cost_of_sales: Dict[str, int] = field(default_factory=dict)  # 2120 Себестоимость продаж
+    gross_profit: Dict[str, int] = field(default_factory=dict)  # 2100
+    commercial_expenses: Dict[str, int] = field(default_factory=dict)  # 2210
+    management_expenses: Dict[str, int] = field(default_factory=dict)  # 2220
+    profit_from_sales: Dict[str, int] = field(default_factory=dict)  # 2200
+    income_from_participation: Dict[str, int] = field(default_factory=dict)  # 2310
+    percentage_receivable: Dict[str, int] = field(default_factory=dict)  # 2320
+    percentage_to_pay: Dict[str, int] = field(default_factory=dict)  # 2330
+    other_profit: Dict[str, int] = field(default_factory=dict)  # 2340
+    other_expenses: Dict[str, int] = field(default_factory=dict)  # 2350
+    profit_from_continuing_operations: Dict[str, int] = field(default_factory=dict)  # 2300
+    organization_income_tax: Dict[str, int] = field(default_factory=dict)  # 2410
+    deferred_organization_income_tax: Dict[str, int] = field(default_factory=dict)  # 2412
+    other: Dict[str, int] = field(default_factory=dict)  # 2460
+    net_profit: Dict[str, int] = field(default_factory=dict)  # 2400 Чистая прибыль
+    total_financial_result: Dict[str, int] = field(default_factory=dict)  # 2500
 
-        self.revenue = get_value_by_code(df, consts.REVENUE)
-        self.other_incoming = get_value_by_code(df, consts.OTHER_INCOMING)
-        self.cost_of_sales = get_value_by_code(df, consts.COST_OF_SALES)
-        self.gross_profit = get_value_by_code(df, consts.GROSS_PROFIT)
-        self.commercial_expenses = get_value_by_code(df, consts.COMMERCIAL_EXPENSES)
-        self.management_expenses = get_value_by_code(df, consts.MANAGEMENT_EXPENSES)
-        self.profit_from_sales = get_value_by_code(df, consts.PROFIT_FROM_SALES)
-        self.income_from_participation = get_value_by_code(df, consts.INCOME_FROM_PARTICIPATION)
-        self.percentage_receivable = get_value_by_code(df, consts.PERCENTAGE_RECEIVABLE)
-        self.percentage_to_pay = get_value_by_code(df, consts.PERCENTAGE_TO_PAY)
-        self.other_profit = get_value_by_code(df, consts.OTHER_PROFIT)
-        self.other_expenses = get_value_by_code(df, consts.OTHER_EXPENSES)
-        self.profit_from_continuing_operations = get_value_by_code(df, consts.PROFIT_FROM_CONTINUING_OPERATIONS)
-        self.organization_income_tax = get_value_by_code(df, consts.ORGANIZATION_INCOME_TAX)
-        self.deferred_organization_income_tax = get_value_by_code(df, consts.DEFERRED_ORGANIZATION_INCOME_TAX)
-        self.other = get_value_by_code(df, consts.OTHER)
-        self.net_profit = get_value_by_code(df, consts.NET_PROFIT)
+    def get_value(self, code: str, date: str) -> int:
+        """Возвращает значение по коду строки ОФР и году. Если нет — 0."""
+        field_name = OFR_CODE_TO_FIELD.get(code)
+        if not field_name:
+            return 0
+        return getattr(self, field_name, {}).get(date, 0)

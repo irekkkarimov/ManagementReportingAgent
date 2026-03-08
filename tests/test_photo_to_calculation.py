@@ -30,10 +30,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from agent.tools.image.recognize_image import parse_financial_report_tool
 from agent.tools.finance.profitability.ros import calculate_ros
-from agent.tools.finance.profitability.roa import calculate_roa
 from agent.tools.finance.profitability.gross_margin import calculate_gross_margin
 from agent.tools.finance.profitability.operating_margin import calculate_operating_margin
-from agent.tools.finance.profitability.turnover.total_asset import calculate_total_asset_turnover
 from agent.tools.finance.liquidity import (
     calculate_current_liquidity_ratio,
     calculate_quick_liquidity_ratio,

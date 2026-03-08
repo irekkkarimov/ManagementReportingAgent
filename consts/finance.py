@@ -40,6 +40,28 @@ financial_results_consts = [
     TOTAL_FINANCIAL_RESULT,
 ]
 
+# Соответствие кода ОФР имени поля в FinancialResultsReport (dict {дата: значение})
+OFR_CODE_TO_FIELD = {
+    REVENUE: "revenue",
+    OTHER_INCOMING: "other_incoming",
+    COST_OF_SALES: "cost_of_sales",
+    GROSS_PROFIT: "gross_profit",
+    COMMERCIAL_EXPENSES: "commercial_expenses",
+    MANAGEMENT_EXPENSES: "management_expenses",
+    PROFIT_FROM_SALES: "profit_from_sales",
+    INCOME_FROM_PARTICIPATION: "income_from_participation",
+    PERCENTAGE_RECEIVABLE: "percentage_receivable",
+    PERCENTAGE_TO_PAY: "percentage_to_pay",
+    OTHER_PROFIT: "other_profit",
+    OTHER_EXPENSES: "other_expenses",
+    PROFIT_FROM_CONTINUING_OPERATIONS: "profit_from_continuing_operations",
+    ORGANIZATION_INCOME_TAX: "organization_income_tax",
+    DEFERRED_ORGANIZATION_INCOME_TAX: "deferred_organization_income_tax",
+    OTHER: "other",
+    NET_PROFIT: "net_profit",
+    TOTAL_FINANCIAL_RESULT: "total_financial_result",
+}
+
 # Коды ОФР, которые по стандарту бухучёта всегда показываются в скобках (расходы).
 # Используется как fallback, когда OCR не распознаёт скобки.
 OFR_NEGATIVE_CODES = {
