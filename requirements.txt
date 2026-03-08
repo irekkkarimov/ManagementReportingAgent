@@ -1,6 +1,5 @@
-tabula-py
+
 requests
-paddleocr
 opencv-python
 openpyxl
 langchain-classic

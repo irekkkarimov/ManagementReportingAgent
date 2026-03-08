@@ -10,8 +10,8 @@ from agent.models.finance_report import FinanceReportModel
 from agent.tools.utils import EXCEL_OUTPUT_PATH_BASE
 
 
-@tool("generate_xlsx_tool", description="Создает Excel (xlsx) документ с посчитанными финансовыми показателями")
-def generate_xlsx_tool(report: FinanceReportModel) -> None:
+@tool("generate_excel_report", description="Создает Excel (xlsx) документ с посчитанными финансовыми показателями")
+def generate_excel_report(report: FinanceReportModel) -> None:
     """
     Создает Excel (xlsx) документ с посчитанными финансовыми показателями
     :param report: Данные типа FinanceReportModel
@@ -42,7 +42,7 @@ def generate_xlsx_tool(report: FinanceReportModel) -> None:
         row_index = 3
         for metric, value in metrics.items():
             if value is not None:
-                ws.append([metric, value])
+                ws.append([metric, float(value).__round__(4)])
                 row_index += 1
 
         # Автоширина колонок

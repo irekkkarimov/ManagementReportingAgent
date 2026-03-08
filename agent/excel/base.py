@@ -54,19 +54,11 @@ def parse_rows_from_df(df: pd.DataFrame) -> Dict[str, Dict[str, int]]:
         else:
             rows[code] = {}
             for col in value_columns(df):
-                print(row)
-                print(value_columns(df))
-                print(col)
                 val = row.get(col)
-                print(val)
                 if pd.notna(val):
                     key = date_key(col)
-                    print("code:", code, "; key:", key, "; value:", val)
                     try:
-                        print('try1')
                         rows[code][key] = int(val)
-                        print('try2')
                     except (ValueError, TypeError):
-                        print('except')
                         rows[code][key] = 0
     return rows

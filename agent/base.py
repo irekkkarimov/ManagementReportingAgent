@@ -25,7 +25,7 @@ from agent.tools.finance.turnover.payables import calculate_payables_turnover
 from agent.tools.input.download_google_sheets import download_google_sheets
 from agent.tools.input.load_excel_file import load_excel_file_tool
 from agent.tools.input.validate_finance_link import validate_finance_link_tool
-from agent.tools.output.generate_xlsx import generate_xlsx_tool
+from agent.tools.output.generate import generate_excel_report
 from agent.yandex.yandex_gpt import YandexGPT
 
 
@@ -42,9 +42,8 @@ class Agent:
             model="GigaChat-2-Pro",
             verify_ssl_certs=False,
             credentials=gigachat_creds,
-            timeout=120,
+            timeout=30,
             temperature=gigachat_temperature,
-
         )
 
         self._yandex_gpt = YandexGPT(yc_folder_id, yandex_gpt_api_key, yandex_gpt_prompt_path, yandex_gpt_temperature)
@@ -66,10 +65,16 @@ class Agent:
 
         print("MESSAGE HISTORY BEFORE AGENT CALL:", message_history)
 
+        # result = self._agent.invoke({"messages": message_history})
+        #
+        # result_content = Agent._get_ai_result_content(result)
+        # Agent._save_results(query=query, result=result)
+
         result = self._agent.invoke({"messages": message_history})
 
         result_content = Agent._get_ai_result_content(result)
         Agent._save_results(query=query, result=result)
+
         self._history[user_id] = result["messages"]
 
         return result_content
@@ -138,7 +143,7 @@ class Agent:
             calculate_cash_liquidity_ratio,
 
             # output
-            generate_xlsx_tool,
+            generate_excel_report,
         ]
 
         return tools

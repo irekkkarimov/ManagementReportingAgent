@@ -28,7 +28,6 @@ def parse_balance_sheet_xlsx(df: pd.DataFrame) -> AccountantBalanceReport:
     report = AccountantBalanceReport()
 
     for code, field_name in CODE_TO_FIELD.items():
-        print('code:', code, "; field_name:", field_name, "; data:", rows.get(code, {}))
         setattr(report, field_name, rows.get(code, {}))
 
     return report
