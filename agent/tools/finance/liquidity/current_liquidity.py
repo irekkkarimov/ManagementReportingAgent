@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 
 from agent.tools.utils import safe_div
+from agent.tools.finance.calculation_cache import set_indicator
 
 
 @tool(
@@ -16,4 +17,6 @@ def calculate_current_liquidity_ratio(
     :param current_assets: Оборотные активы
     :param current_liabilities: Краткосрочные обязательства
     """
-    return safe_div(current_assets, current_liabilities)
+    result = safe_div(current_assets, current_liabilities)
+    set_indicator("Current Liquidity Ratio", result)
+    return result

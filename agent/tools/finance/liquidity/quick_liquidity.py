@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 
 from agent.tools.utils import safe_div
+from agent.tools.finance.calculation_cache import set_indicator
 
 
 @tool(
@@ -17,4 +18,6 @@ def calculate_quick_liquidity_ratio(
     :param inventory: Запасы
     :param current_liabilities: Краткосрочные обязательства
     """
-    return safe_div(current_assets - inventory, current_liabilities)
+    result = safe_div(current_assets - inventory, current_liabilities)
+    set_indicator("Quick Liquidity Ratio", result)
+    return result

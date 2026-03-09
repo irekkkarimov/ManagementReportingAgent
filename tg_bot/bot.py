@@ -169,11 +169,7 @@ def create_bot() -> TelegramAgentBot:
     agent = Agent(
         gigachat_creds=creds,
         gigachat_prompt_path="../agent/input/agent_llm_prompt.txt",
-        gigachat_temperature=0.3,
-        yc_folder_id=os.getenv("YC_FOLDER_ID"),
-        yandex_gpt_api_key=os.getenv("YANDEX_GPT_API_KEY"),
-        yandex_gpt_temperature=0.3,
-        yandex_gpt_prompt_path="../agent/input/yandex_gpt_prompt.txt")
+        gigachat_temperature=0.3)
 
     return TelegramAgentBot(config, storage, agent)
 

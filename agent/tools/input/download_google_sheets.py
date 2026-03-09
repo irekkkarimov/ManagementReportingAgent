@@ -5,15 +5,14 @@
 
 import io
 import re
-from typing import Optional, Tuple, Union
+from typing import Optional
 
 import pandas as pd
 import requests
 from langchain_core.tools import tool
 
+from agent.tools.finance.parsed_tables_store import put_balance, put_ofr, get_available_years
 from agent.tools.input.download_and_parse_finance_table import download_and_parse_finance_table
-from input_models.accountant_balance_report import AccountantBalanceReport
-from input_models.financial_results_report import FinancialResultsReport
 
 # Google Sheets: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit...
 # Google Drive file: https://drive.google.com/file/d/FILE_ID/view...
@@ -130,14 +129,32 @@ def _download_as_xlsx(url: str, sheet_name: str = SHEET_PARSED) -> pd.DataFrame:
 def download_google_sheets(
     url: str,
     sheet_name: str = SHEET_PARSED,
-) -> Tuple[str, Union[AccountantBalanceReport, FinancialResultsReport]]:
+) -> str:
     """
-    Скачивает xlsx по ссылке, парсит в модель (баланс/ОФР) и возвращает сообщение для агента.
+    Скачивает xlsx по ссылке, парсит в модель (баланс/ОФР), сохраняет в хранилище
+    и возвращает строку-сообщение для агента.
 
     :param url: ссылка на Google Sheets или Google Drive
     :param sheet_name: имя листа (по умолчанию "parsed")
     :return: сообщение об успехе или об ошибке
     """
-    df = _download_as_xlsx(url, sheet_name=sheet_name)
-    return download_and_parse_finance_table(df)
+    try:
+        df = _download_as_xlsx(url, sheet_name=sheet_name)
+        report_kind, report = download_and_parse_finance_table(df)
+
+        if report_kind == "balance_sheet":
+            put_balance(report)
+        else:
+            put_ofr(report)
+
+        years = get_available_years()
+        return (
+            f"Загружено: {report_kind}. "
+            f"Доступные годы: {years}. "
+            "Если нужны обе таблицы — загрузи вторую ссылку."
+        )
+    except ValueError as exc:
+        return f"Ошибка загрузки или парсинга: {exc}"
+    except Exception as exc:
+        return f"Ошибка: {exc}"
 

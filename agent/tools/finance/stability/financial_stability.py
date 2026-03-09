@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 
 from agent.tools.utils import safe_div
+from agent.tools.finance.calculation_cache import set_indicator
 
 
 @tool(
@@ -17,4 +18,6 @@ def calculate_financial_stability_ratio(
     :param long_term_liabilities: Долгосрочные обязательства
     :param total_assets: Общие активы
     """
-    return safe_div(equity + long_term_liabilities, total_assets)
+    result = safe_div(equity + long_term_liabilities, total_assets)
+    set_indicator("Financial Stability Ratio", result)
+    return result

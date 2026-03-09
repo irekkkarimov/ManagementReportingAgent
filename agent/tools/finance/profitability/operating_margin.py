@@ -1,6 +1,7 @@
 from langchain.tools import tool
 
 from agent.tools.utils import safe_div
+from agent.tools.finance.calculation_cache import set_indicator
 
 
 @tool("calculate_operating_margin", description="Считает Operating Margin (Операционная рентабельность)")
@@ -14,4 +15,6 @@ def calculate_operating_margin(
     """
     operating_income = revenue + cost_of_sales + commercial_expenses + management_expenses
 
-    return safe_div(operating_income, revenue)
+    result = safe_div(operating_income, revenue)
+    set_indicator("Operating Margin", result)
+    return result
