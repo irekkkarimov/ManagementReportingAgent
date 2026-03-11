@@ -22,6 +22,10 @@ from agent.tools.finance.turnover.total_asset import calculate_total_asset_turno
 from agent.tools.finance.turnover.inventory import calculate_inventory_turnover
 from agent.tools.finance.turnover.receivables import calculate_receivables_turnover
 from agent.tools.finance.turnover.payables import calculate_payables_turnover
+from agent.tools.finance.calculation_cache import set_session as _set_calc_session
+from agent.tools.finance.get_finance_data_for_calculations import get_finance_data_for_calculations
+from agent.tools.finance.inputs_cache import set_session as _set_inputs_session
+from agent.tools.finance.parsed_tables_store import set_session as _set_store_session
 from agent.tools.input.download_google_sheets import download_google_sheets
 from agent.tools.input.load_excel_file import load_excel_file_tool
 from agent.tools.input.validate_finance_link import validate_finance_link_tool
@@ -65,11 +69,9 @@ class Agent:
 
         print("MESSAGE HISTORY BEFORE AGENT CALL:", message_history)
 
-        # result = self._agent.invoke({"messages": message_history})
-        #
-        # result_content = Agent._get_ai_result_content(result)
-        # Agent._save_results(query=query, result=result)
-
+        _set_calc_session(user_id)
+        _set_inputs_session(user_id)
+        _set_store_session(user_id)
         result = self._agent.invoke({"messages": message_history})
 
         result_content = Agent._get_ai_result_content(result)
@@ -116,7 +118,7 @@ class Agent:
     @staticmethod
     def get_tools() -> list[BaseTool]:
         tools = [
-            #input
+            # input
             validate_finance_link_tool,
             download_google_sheets,
             load_excel_file_tool,

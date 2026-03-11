@@ -1,20 +1,18 @@
 from langchain_core.tools import tool
 
-from agent.tools.utils import safe_div
+from agent.tools.finance.calculation_cache import set_indicator
+from agent.tools.finance.inputs_cache import get_input
+from agent.tools.utils import format_ratio, safe_div
+
+_NAME = "Quick Liquidity Ratio"
 
 
-@tool(
-    "calculate_quick_liquidity_ratio",
-    description="Считает коэффициент быстрой ликвидности",
-)
-def calculate_quick_liquidity_ratio(
-    current_assets: float, inventory: float, current_liabilities: float
-) -> float:
-    """
-    Quick Liquidity Ratio = (Current Assets - Inventory) / Current Liabilities
-
-    :param current_assets: Оборотные активы
-    :param inventory: Запасы
-    :param current_liabilities: Краткосрочные обязательства
-    """
-    return safe_div(current_assets - inventory, current_liabilities)
+@tool("calculate_quick_liquidity_ratio", description="Считает коэффициент быстрой ликвидности. Данные берутся из кэша по году.")
+def calculate_quick_liquidity_ratio(year: str) -> str:
+    """Quick Liquidity Ratio = (Оборотные активы - Запасы) / Краткосрочные обязательства"""
+    raw = safe_div(
+        get_input(year, "total_current_assets") - get_input(year, "inventories"),
+        get_input(year, "total_current_liabilities"),
+    )
+    set_indicator(_NAME, round(raw, 4))
+    return format_ratio(raw, _NAME)
