@@ -75,14 +75,15 @@ def set_inputs(year: str, inputs: Dict[str, float]) -> None:
     bucket[year].update(inputs)
 
 
-def get_input(year: str, name: str, default: float = 0.0) -> float:
+def get_input(year: str, name: str) -> Optional[float]:
     """
     Возвращает конкретное поле из кэша за указанный год.
+    Возвращает None если поле или год отсутствуют — это отличается от значения 0.
     :param year: год, например "2024"
     :param name: имя поля, например "revenue", "total_assets"
-    :param default: значение по умолчанию если поля или года нет
     """
-    return _session_bucket().get(year, {}).get(name, default)
+    value = _session_bucket().get(year, {}).get(name)
+    return value
 
 
 def get_all_inputs(year: str) -> Dict[str, float]:
