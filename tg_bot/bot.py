@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import re
 from collections import defaultdict
 
 from anyio import sleep
@@ -20,6 +21,8 @@ from tg_bot.models.image_proccessing import ImageBatch
 from tg_bot.storage import ConversationStorage
 
 import time
+
+_FILE_PATH_RE = re.compile(r"(\.[\\/][\w\-./\\]+\.(?:xlsx|xls|pdf))")
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +58,9 @@ class TelegramAgentBot:
 
         print("MESSAGE RECEIVED FROM TG: ", update)
 
-        reply_text = TelegramAgentBot.format_reply(self._agent.process_query(chat_id, user_text))
+        raw_reply = self._agent.process_query(chat_id, user_text)
 
-        await TelegramAgentBot._reply(update, reply_text)
+        await TelegramAgentBot._reply_with_file(update, raw_reply)
 
     async def handle_photo_with_caption(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
@@ -87,11 +90,8 @@ class TelegramAgentBot:
 
         if not media_group_id:
             # Обычное одиночное фото
-            reply_text = TelegramAgentBot.format_reply(
-                self._agent.process_query(chat_id, caption_text, [file_path])
-            )
-
-            await TelegramAgentBot._reply(update, reply_text)
+            raw_reply = self._agent.process_query(chat_id, caption_text, [file_path])
+            await TelegramAgentBot._reply_with_file(update, raw_reply)
 
     async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Обработка загруженных файлов (Excel)."""
@@ -113,10 +113,8 @@ class TelegramAgentBot:
         ext = ".xlsx" if name.endswith(".xlsx") else ".xls"
         file_path = f"./temp_excel/{document.file_id}{ext}"
         await file.download_to_drive(file_path)
-        reply_text = TelegramAgentBot.format_reply(
-            self._agent.process_query(chat_id, caption_text, [file_path])
-        )
-        await TelegramAgentBot._reply(update, reply_text)
+        raw_reply = self._agent.process_query(chat_id, caption_text, [file_path])
+        await TelegramAgentBot._reply_with_file(update, raw_reply)
 
     async def _init_image_batch_processing(self, media_group_id: str):
         image_batch = self._media_groups[media_group_id]
@@ -128,11 +126,8 @@ class TelegramAgentBot:
 
         image_paths = image_batch.image_paths
 
-        reply_text = TelegramAgentBot.format_reply(
-            self._agent.process_query(image_batch.chat_id, image_batch.message, image_paths)
-        )
-
-        await TelegramAgentBot._reply(image_batch.update, reply_text)
+        raw_reply = self._agent.process_query(image_batch.chat_id, image_batch.message, image_paths)
+        await TelegramAgentBot._reply_with_file(image_batch.update, raw_reply)
 
 
     def run(self) -> None:
@@ -154,6 +149,26 @@ class TelegramAgentBot:
                 .replace("/", "")
                 .replace("\\", "")
                 .replace("$", ""))
+
+    @staticmethod
+    async def _reply_with_file(update: Update, raw_reply: str) -> None:
+        """
+        Принимает сырой (неформатированный) ответ агента.
+        Если в тексте есть путь к файлу (.xlsx, .xls, .pdf) и файл существует —
+        отправляет файл через reply_document, а отформатированный текст без пути — текстом.
+        Иначе — обычный reply_text с форматированием.
+        """
+        match = _FILE_PATH_RE.search(raw_reply)
+        if match:
+            file_path = match.group(1)
+            if os.path.exists(file_path):
+                text_before = raw_reply[:match.start()].strip()
+                if text_before:
+                    await update.message.reply_text(TelegramAgentBot.format_reply(text_before))
+                with open(file_path, "rb") as f:
+                    await update.message.reply_document(document=f, filename=os.path.basename(file_path))
+                return
+        await update.message.reply_text(TelegramAgentBot.format_reply(raw_reply))
 
     @staticmethod
     async def _reply(update, reply_text: str):

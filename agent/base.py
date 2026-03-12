@@ -30,6 +30,7 @@ from agent.tools.input.download_google_sheets import download_google_sheets
 from agent.tools.input.load_excel_file import load_excel_file_tool
 from agent.tools.input.validate_finance_link import validate_finance_link_tool
 from agent.tools.output.generate import generate_excel_report
+from agent.tools.output.generate_pdf import generate_pdf_report
 from agent.yandex.yandex_gpt import YandexGPT
 
 
@@ -146,6 +147,7 @@ class Agent:
 
             # output
             generate_excel_report,
+            generate_pdf_report,
         ]
 
         return tools

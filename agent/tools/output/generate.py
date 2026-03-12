@@ -5,9 +5,7 @@
 по всем годам, доступным в inputs_cache, и сохраняет результат в .xlsx.
 """
 
-import os
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from langchain_core.tools import tool
 from openpyxl import Workbook
@@ -15,7 +13,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.worksheet.worksheet import Worksheet
 
 from agent.indicators.compute import ALL_INDICATORS, IndicatorDef
-from agent.tools.finance.inputs_cache import get_available_years
+from agent.tools.output._shared import compute_all_indicators, get_years_or_error, make_output_path
 from agent.tools.utils import EXCEL_OUTPUT_PATH_BASE
 
 _SECTION_FILL = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
@@ -29,21 +27,6 @@ def _fmt(value: Optional[float]):
     return _DASH if value is None else value
 
 
-def _compute_all(years: List[str]) -> Dict[str, Dict[str, Optional[float]]]:
-    """
-    Для каждого показателя из ALL_INDICATORS считает значения по всем годам.
-
-    :return: {indicator_name: {year: value_or_None}}
-    """
-    results: Dict[str, Dict[str, Optional[float]]] = {}
-    for ind in ALL_INDICATORS:
-        results[ind.name] = {}
-        for year in years:
-            try:
-                results[ind.name][year] = ind.fn(year)
-            except Exception:
-                results[ind.name][year] = None
-    return results
 
 
 def _write_sheet(
@@ -94,17 +77,11 @@ def _write_sheet(
         section = "Прочее"
         seen_sections.discard(section)
         for name, vals in leftover:
-            ind_stub = IndicatorDef(name, section, lambda y: None, False)
+            ind_stub = IndicatorDef(name, section, lambda _y: None, False)
             _append_indicator(ind_stub, section)
             row_num = ws.max_row
             for i, year in enumerate(years):
                 ws.cell(row=row_num, column=year_col_start + i).value = _fmt(vals.get(year))
-
-
-def _make_file_path() -> str:
-    os.makedirs(EXCEL_OUTPUT_PATH_BASE, exist_ok=True)
-    filename = f"financial_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    return os.path.join(EXCEL_OUTPUT_PATH_BASE, filename)
 
 
 @tool(
@@ -122,15 +99,12 @@ def generate_excel_report() -> str:
 
     :return: путь к файлу или сообщение об ошибке
     """
-    years = get_available_years()
-    if not years:
-        return (
-            "Нет загруженных данных. "
-            "Сначала загрузи таблицу через download_google_sheets или загрузи файл."
-        )
+    years = get_years_or_error()
+    if isinstance(years, str):
+        return years
 
-    results = _compute_all(years)
-    file_path = _make_file_path()
+    results = compute_all_indicators(years)
+    file_path = make_output_path(EXCEL_OUTPUT_PATH_BASE, "financial_report", "xlsx")
 
     wb = Workbook()
     ws = wb.active
