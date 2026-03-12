@@ -102,17 +102,31 @@ class TelegramAgentBot:
             await message.reply_text("Не удалось получить файл.")
             return
         name = document.file_name.lower()
-        if not (name.endswith(".xlsx") or name.endswith(".xls")):
+        if not (name.endswith(".xlsx") or name.endswith(".xls") or name.endswith(".xml")):
             await message.reply_text(
-                "Принимаются только файлы Excel (.xlsx или .xls). Загрузите таблицу в нужном формате."
+                "Принимаются файлы Excel (.xlsx, .xls) или XML-выгрузка из 1С (.xml)."
             )
             return
-        caption_text = (message.caption or "").strip() or "Обработай приложенный Excel-файл."
+
         os.makedirs("./temp_excel", exist_ok=True)
         file = await document.get_file()
-        ext = ".xlsx" if name.endswith(".xlsx") else ".xls"
-        file_path = f"./temp_excel/{document.file_id}{ext}"
-        await file.download_to_drive(file_path)
+
+        if name.endswith(".xml"):
+            file_path = f"./temp_excel/{document.file_id}.xml"
+            await file.download_to_drive(file_path)
+            caption_text = (
+                (message.caption or "").strip()
+                or f"Загрузи данные из XML-файла отчётности: {file_path}"
+            )
+        else:
+            ext = ".xlsx" if name.endswith(".xlsx") else ".xls"
+            file_path = f"./temp_excel/{document.file_id}{ext}"
+            await file.download_to_drive(file_path)
+            caption_text = (
+                (message.caption or "").strip()
+                or f"Загрузи данные из Excel-файла: {file_path}"
+            )
+
         raw_reply = self._agent.process_query(chat_id, caption_text, [file_path])
         await TelegramAgentBot._reply_with_file(update, raw_reply)
 

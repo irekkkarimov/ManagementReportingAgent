@@ -19,14 +19,25 @@ from agent.tools.utils import EXCEL_OUTPUT_PATH_BASE
 _SECTION_FILL = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
 _HEADER_FILL = PatternFill(start_color="BDD7EE", end_color="BDD7EE", fill_type="solid")
 _BOLD = Font(bold=True)
-_DASH = "—"
+_DASH = "\u2014"  # —
+
+_FMT_PERCENT = "0.00%"  # Excel умножает значение на 100 и добавляет %
+_FMT_RATIO = "0.00"     # коэффициенты — два знака после запятой
+
+# Быстрый словарь: имя показателя -> is_percent
+_IS_PERCENT: Dict[str, bool] = {ind.name: ind.is_percent for ind in ALL_INDICATORS}
 
 
-def _fmt(value: Optional[float]):
-    """None → прочерк; число → само число (0 остаётся 0)."""
-    return _DASH if value is None else value
-
-
+def _apply_value_formats(
+    ws: Worksheet, row_num: int, col_start: int, n_cols: int, is_percent: bool
+) -> None:
+    """Применяет числовой формат ко всем ячейкам со значениями в строке."""
+    fmt = _FMT_PERCENT if is_percent else _FMT_RATIO
+    for col in range(col_start, col_start + n_cols):
+        cell = ws.cell(row=row_num, column=col)
+        if cell.value != _DASH and cell.value is not None:
+            cell.number_format = fmt
+            cell.alignment = Alignment(horizontal="right")
 
 
 def _write_sheet(
@@ -57,16 +68,20 @@ def _write_sheet(
     def _append_indicator(ind: IndicatorDef, section: str) -> None:
         if section not in seen_sections:
             seen_sections.add(section)
-            row = [section] + [""] * len(years)
-            ws.append(row)
+            section_row = [section] + [""] * len(years)
+            ws.append(section_row)
             for col_idx in range(1, len(years) + 2):
                 cell = ws.cell(row=ws.max_row, column=col_idx)
                 cell.font = _BOLD
                 cell.fill = _SECTION_FILL
 
         year_values = results.get(ind.name, {})
-        row = [ind.name] + [_fmt(year_values.get(y)) for y in years]
-        ws.append(row)
+        data_row = [ind.name] + [
+            _DASH if year_values.get(y) is None else year_values.get(y)
+            for y in years
+        ]
+        ws.append(data_row)
+        _apply_value_formats(ws, ws.max_row, year_col_start, len(years), ind.is_percent)
         used_names.add(ind.name)
 
     for ind in ALL_INDICATORS:
@@ -77,11 +92,13 @@ def _write_sheet(
         section = "Прочее"
         seen_sections.discard(section)
         for name, vals in leftover:
-            ind_stub = IndicatorDef(name, section, lambda _y: None, False)
+            is_pct = _IS_PERCENT.get(name, False)
+            ind_stub = IndicatorDef(name, section, lambda _y: None, is_pct)
             _append_indicator(ind_stub, section)
             row_num = ws.max_row
             for i, year in enumerate(years):
-                ws.cell(row=row_num, column=year_col_start + i).value = _fmt(vals.get(year))
+                v = vals.get(year)
+                ws.cell(row=row_num, column=year_col_start + i).value = _DASH if v is None else v
 
 
 @tool(

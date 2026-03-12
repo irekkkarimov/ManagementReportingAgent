@@ -28,6 +28,7 @@ from agent.tools.finance.inputs_cache import set_session as _set_inputs_session
 from agent.tools.finance.parsed_tables_store import set_session as _set_store_session
 from agent.tools.input.download_google_sheets import download_google_sheets
 from agent.tools.input.load_excel_file import load_excel_file_tool
+from agent.tools.input.load_xml_file import load_xml_file_tool
 from agent.tools.input.validate_finance_link import validate_finance_link_tool
 from agent.tools.output.generate import generate_excel_report
 from agent.tools.output.generate_pdf import generate_pdf_report
@@ -123,6 +124,7 @@ class Agent:
             validate_finance_link_tool,
             download_google_sheets,
             load_excel_file_tool,
+            load_xml_file_tool,
 
             # profitability
             calculate_ros,
