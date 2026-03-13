@@ -22,6 +22,7 @@ from agent.tools.finance.turnover.total_asset import calculate_total_asset_turno
 from agent.tools.finance.turnover.inventory import calculate_inventory_turnover
 from agent.tools.finance.turnover.receivables import calculate_receivables_turnover
 from agent.tools.finance.turnover.payables import calculate_payables_turnover
+from agent.tools.finance.analyze_risks import analyze_risks
 from agent.tools.finance.calculation_cache import set_session as _set_calc_session
 from agent.tools.finance.get_finance_data_for_calculations import get_finance_data_for_calculations
 from agent.tools.finance.inputs_cache import set_session as _set_inputs_session
@@ -146,6 +147,9 @@ class Agent:
             calculate_current_liquidity_ratio,
             calculate_quick_liquidity_ratio,
             calculate_cash_liquidity_ratio,
+
+            # risk analysis
+            analyze_risks,
 
             # output
             generate_excel_report,
